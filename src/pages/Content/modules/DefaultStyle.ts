@@ -54,11 +54,15 @@ const getPropSafe = (str = ''): string => {
 
 export type DefaultStyle = {
     siteKey: string,
-    variablesMeta: { [key: string]: { light: boolean, dark: boolean, flatMap: string }; },
-    variables: { [key: string]: { [key: string] : { cssVar: string, cssValue: string, type: string } } }
+    variablesMeta: { [key: string]: { 
+        light: string, 
+        dark: string, 
+        flatMap: string,
+        type: string
+    }}
 }
 
-const getCurrentVariables = (): DefaultStyle | null => {
+export const getCurrentVariables = (): DefaultStyle | null => {
     const style = Array.from(document.styleSheets)
         .filter(
             sheet => sheet.href && /\/themes\/[^\/]+\/variables(?:\.[a-f0-9]+)?\.css$/.test(sheet.href || '')
@@ -66,51 +70,73 @@ const getCurrentVariables = (): DefaultStyle | null => {
 
     if(!style) { return null; }
     
-    const result: { [key: string]: { [key: string] : any } } = {};
-
     const keys: { [key: string]: string; } = {
         'body': 'light',
         'body.is-dark-mode': 'dark'
     };
 
-    const variablesMeta: { [key: string]: { light: boolean, dark: boolean, flatMap: string }; } = {};
+    const variablesMeta: { [key: string]: { light: string, dark: string, flatMap: string, type: string }; } = {};
 
     for (const [_, cssStyleRule] of Object.entries(style.cssRules)) {
+        
         if( !(cssStyleRule instanceof CSSStyleRule) ) { continue; }
         const key = keys[cssStyleRule.selectorText] || '';
-        if (key && !result[key]) { result[key] = {}; }
 
         for( const [_, prop] of Object.entries(cssStyleRule.style) ) {
-            if(!prop || !prop.startsWith("--")){ continue; }
+            if(!prop || !prop.startsWith("--")){ 
+                continue; 
+            }
 
             const val = getPropertyValue(cssStyleRule.style, prop);           
-            if(!val) {  continue;  }
+            if(!val) {
+                continue;  
+            }
 
             const propSafe = getPropSafe(prop);
+            const type = getTypeVarByValue(val);
 
             if(!variablesMeta[propSafe]) {
                 variablesMeta[propSafe] = { 
-                    dark: (key === 'dark'), 
-                    light: (key === 'light'),
+                    dark: val,
+                    light: val,
+                    type,
                     flatMap: getFLatMap(propSafe)
                 };
             } else if(key === 'dark' || key === 'light') {
-                variablesMeta[propSafe][key] = true;
+                variablesMeta[propSafe][key] = val;
             }
-
-            result[key][propSafe] = {
-                cssVar: prop,
-                cssValue: val,
-                type: getTypeVarByValue(val),
-            };
         }
     }
 
     return {
         siteKey: window.location.host,
-        variablesMeta: variablesMeta,
-        variables: result
+        variablesMeta 
     }
+}
+
+export const getStyleByVariables = (variables: DefaultStyle['variablesMeta']): string => {
+
+    let styleObj = { light: '', dark: ''};
+
+    for(const key in variables) {
+        if(variables[key].type === 'COLOR') {
+            styleObj.light += ` --${key}: ${variables[key].light};`;
+            styleObj.dark += ` --${key}: ${variables[key].dark};`;
+        }
+    }
+
+    const style = `
+        body {
+            ${styleObj.light}
+        }
+
+        body.is-dark-mode {
+            ${styleObj.dark}
+        }
+    `;
+
+    return style;
+
 }
 
 export default getCurrentVariables;

@@ -3,7 +3,7 @@ import './Popup.css';
 
 const Popup = () => {
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); 
   const [defaultStyle, setDefaultStyle] = useState(false);
 
 

@@ -22,6 +22,7 @@ const Panel: React.FC = () => {
 
   const loadDefaultStyle = () => chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if(!tabs[0] || !tabs[0].id){ return; }
+    if( !loading ) { setLoading(true); }
     setTabId(tabs[0].id);
     chrome.tabs.sendMessage(tabs[0].id, { action: 'GET_PAGE_VARIABLES' }, (response: DefaultStyle ) => {
       setDefaultStyle(response)
@@ -37,7 +38,7 @@ const Panel: React.FC = () => {
     setCanChange(canChange);
   });
 
-  chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  chrome.tabs.onActivated.addListener(async () => {
     
     checkPage();
 
@@ -77,31 +78,22 @@ const Panel: React.FC = () => {
             <br/><br/>
             Dados não salvos serão perdidos.
             <br/><br/>
-            <button onClick={() => backToOriginalTab()}>Retomar design</button></div></div>
+            <button className="button" onClick={() => backToOriginalTab()}>Retomar design</button></div></div>
           )}
 
         {(!loading && !defaultStyle) && (<div className="float-warning">
-          <div>Ops! aparentemente este não é um site compatível... Tente desativar e ativar a extensão novamente.</div>
+          <div>
+            <div>Ops! aparentemente este não é um site compatível... Tente desativar e ativar a extensão novamente.</div>
+            <br/><br/>
+            <button className="button" onClick={() => loadDefaultStyle()}>Verificar novamente</button>
+          </div>
         </div>) }
 
-      <header>
-        {(!loading && !!defaultStyle) && (<div>Editando: <strong>{ defaultStyle?.siteKey }</strong></div>) }
-
-
-      </header>
         {isDBReady && (<MemoryRouter>
-        <nav>
-          <ul>
-            <li><Link to="/">Load</Link></li>
-            <li><Link to="/list">List</Link></li>
-            <li><Link to="/edit">Editar</Link></li>
-            <li><Link to="/edit/123">Editar 123</Link></li>
-          </ul>
-        </nav>
           <Routes>
-            <Route exact path="/" element={<Load/>}/>
-            <Route exact path="/edit/:id?" props={{ defaultStyle }} element={<Edit defaultStyle={ defaultStyle }/>}/>
-            <Route exact path="/list" element={<List/>}/>
+            <Route path="/" element={<Load/>}/>
+            <Route path="/edit/:id?" element={<Edit defaultStyle={ defaultStyle }/>}/>
+            <Route path="/list" element={<List/>}/>
           </Routes>
         </MemoryRouter>)}
     </section>
